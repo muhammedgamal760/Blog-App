@@ -1,0 +1,14 @@
+apiVersion: v2
+name: blog-app
+description: A Helm chart for Blog Application with authentication
+type: application
+version: 1.0.0
+appVersion: "1.0.0"
+keywords:
+  - blog
+  - nodejs
+  - react
+  - mysql
+maintainers:
+  - name: Blog Admin
+    email: admin@example.com

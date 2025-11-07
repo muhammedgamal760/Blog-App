@@ -1,0 +1,88 @@
+mysql:
+  enabled: true
+  image:
+    repository: mysql
+    tag: "8.0"
+    pullPolicy: IfNotPresent
+  
+  auth:
+    rootPassword: "rootpassword"
+    database: "blog_db"
+    username: "bloguser"
+    password: "blogpassword"
+  
+  persistence:
+    enabled: true
+    size: 5Gi
+    storageClass: "gp2"
+  
+  service:
+    type: ClusterIP
+    port: 3306
+
+backend:
+  enabled: true
+  replicaCount: 2
+  
+  image:
+    repository: your-ecr-repo/blog-backend
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: ClusterIP
+    port: 5000
+  
+  env:
+    PORT: "5000"
+    DB_HOST: "mysql"
+    DB_NAME: "blog_db"
+  
+  secrets:
+    dbUser: "bloguser"
+    dbPassword: "blogpassword"
+    jwtSecret: "your-super-secret-jwt-key-change-in-production"
+  
+  resources:
+    limits:
+      cpu: 500m
+      memory: 512Mi
+    requests:
+      cpu: 250m
+      memory: 256Mi
+  
+  healthCheck:
+    enabled: true
+    path: /health
+
+frontend:
+  enabled: true
+  replicaCount: 2
+  
+  image:
+    repository: your-ecr-repo/blog-frontend
+    tag: "latest"
+    pullPolicy: IfNotPresent
+  
+  service:
+    type: LoadBalancer
+    port: 80
+  
+  resources:
+    limits:
+      cpu: 200m
+      memory: 256Mi
+    requests:
+      cpu: 100m
+      memory: 128Mi
+
+ingress:
+  enabled: false
+  className: "nginx"
+  annotations: {}
+  hosts:
+    - host: blog.example.com
+      paths:
+        - path: /
+          pathType: Prefix
+  tls: []

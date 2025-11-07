@@ -1,0 +1,101 @@
+{{- if .Values.mysql.enabled }}
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: {{ include "blog-app.fullname" . }}-mysql-pvc
+  labels:
+    {{- include "blog-app.labels" . | nindent 4 }}
+spec:
+  accessModes:
+    - ReadWriteOnce
+  storageClassName: {{ .Values.mysql.persistence.storageClass }}
+  resources:
+    requests:
+      storage: {{ .Values.mysql.persistence.size }}
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: {{ include "blog-app.fullname" . }}-mysql-secret
+  labels:
+    {{- include "blog-app.labels" . | nindent 4 }}
+type: Opaque
+data:
+  root-password: {{ .Values.mysql.auth.rootPassword | b64enc | quote }}
+  username: {{ .Values.mysql.auth.username | b64enc | quote }}
+  password: {{ .Values.mysql.auth.password | b64enc | quote }}
+  database: {{ .Values.mysql.auth.database | b64enc | quote }}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: {{ include "blog-app.fullname" . }}-mysql
+  labels:
+    {{- include "blog-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mysql
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      {{- include "blog-app.selectorLabels" . | nindent 6 }}
+      app.kubernetes.io/component: mysql
+  template:
+    metadata:
+      labels:
+        {{- include "blog-app.selectorLabels" . | nindent 8 }}
+        app.kubernetes.io/component: mysql
+    spec:
+      containers:
+      - name: mysql
+        image: "{{ .Values.mysql.image.repository }}:{{ .Values.mysql.image.tag }}"
+        imagePullPolicy: {{ .Values.mysql.image.pullPolicy }}
+        ports:
+        - containerPort: {{ .Values.mysql.service.port }}
+          name: mysql
+        env:
+        - name: MYSQL_ROOT_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "blog-app.fullname" . }}-mysql-secret
+              key: root-password
+        - name: MYSQL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "blog-app.fullname" . }}-mysql-secret
+              key: database
+        - name: MYSQL_USER
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "blog-app.fullname" . }}-mysql-secret
+              key: username
+        - name: MYSQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: {{ include "blog-app.fullname" . }}-mysql-secret
+              key: password
+        volumeMounts:
+        - name: mysql-storage
+          mountPath: /var/lib/mysql
+      volumes:
+      - name: mysql-storage
+        persistentVolumeClaim:
+          claimName: {{ include "blog-app.fullname" . }}-mysql-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  labels:
+    {{- include "blog-app.labels" . | nindent 4 }}
+    app.kubernetes.io/component: mysql
+spec:
+  type: {{ .Values.mysql.service.type }}
+  ports:
+  - port: {{ .Values.mysql.service.port }}
+    targetPort: mysql
+    protocol: TCP
+    name: mysql
+  selector:
+    {{- include "blog-app.selectorLabels" . | nindent 4 }}
+    app.kubernetes.io/component: mysql
+{{- end }}
