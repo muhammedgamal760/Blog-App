@@ -1,7 +1,7 @@
 pipeline {
     agent any
     triggers {
-        githubPush()  // Triggered by GitHub webhook
+        githubPush()  // Triggered by GitHub webhook 
     }
     stages {
         stage('Build') {
